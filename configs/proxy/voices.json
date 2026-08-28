@@ -1,0 +1,65 @@
+{
+  "backend": {
+    "host": "127.0.0.1",
+    "port": 9891
+  },
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 9881
+  },
+  "defaults": {
+    "auto": "zh_ryza",
+    "zh": "zh_ryza",
+    "ja": "ja_ryza"
+  },
+  "voices": [
+    {
+      "voice_id": "ja_ryza",
+      "aliases": [
+        "ryza"
+      ],
+      "config": "configs/proxy/auto/ja_ryza.yaml",
+      "default_language": "ja",
+      "display_name": "莱莎 JP",
+      "prompt_language": "ja",
+      "prompt_text": "おはよう！昼まで寝ちゃうのもアリだけどさ、あたし、待ちくたびれちゃった！起きてよー！",
+      "ref_audio_path": "local_assets/voices/ja_ryza/ref.wav"
+    },
+    {
+      "voice_id": "ja_ryza_asmr",
+      "aliases": [
+        "ryza_asmr"
+      ],
+      "config": "configs/proxy/auto/ja_ryza_asmr.yaml",
+      "default_language": "ja",
+      "display_name": "莱莎 JP（ASMR）",
+      "prompt_language": "ja",
+      "prompt_text": "…おはよう。…もう、あたしのこと、どれだけ待たせるの…起きてよぉ…。",
+      "ref_audio_path": "local_assets/voices/ja_ryza_asmr/ref.wav"
+    },
+    {
+      "voice_id": "zh_ryza",
+      "aliases": [
+        "ryza"
+      ],
+      "config": "configs/proxy/auto/zh_ryza.yaml",
+      "default_language": "zh",
+      "display_name": "莱莎 CN",
+      "prompt_language": "zh",
+      "prompt_text": "早安！睡到中午也不是不行啦，但我都等到膩了耶！快起來嘛！",
+      "ref_audio_path": "local_assets/voices/zh_ryza/ref.wav"
+    },
+    {
+      "voice_id": "zh_ryza_asmr",
+      "aliases": [
+        "ryza_asmr"
+      ],
+      "config": "configs/proxy/auto/zh_ryza_asmr.yaml",
+      "default_language": "zh",
+      "display_name": "莱莎 CN（ASMR）",
+      "prompt_language": "zh",
+      "prompt_text": "…早安。…等你等到有點睏了呢…快起來嘛…。",
+      "ref_audio_path": "local_assets/voices/zh_ryza_asmr/ref.wav"
+    }
+  ]
+}

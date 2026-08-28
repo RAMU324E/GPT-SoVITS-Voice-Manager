@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local GPT-SoVITS Admin</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f0e7;
+      --panel: rgba(255, 252, 247, 0.94);
+      --ink: #1f1b16;
+      --muted: #675d52;
+      --line: #c7b9a7;
+      --accent: #a0432c;
+      --accent-soft: #ead2c4;
+      --ok: #2f6b3d;
+      --warn: #8a5d18;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(160, 67, 44, 0.15), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(57, 85, 122, 0.12), transparent 28%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 18px rgba(31, 27, 22, 0.08);
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff9f2;
+    }
+
+    button.warn {
+      color: #fff9f2;
+      background: #6f2618;
+      border-color: #6f2618;
+    }
+
+    .status {
+      margin-bottom: 18px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      min-height: 48px;
+    }
+
+    .status.ok { border-color: rgba(47, 107, 61, 0.45); color: var(--ok); }
+    .status.warn { border-color: rgba(138, 93, 24, 0.45); color: var(--warn); }
+
+    .defaults,
+    .network,
+    .discovery-card,
+    .voice-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(31, 27, 22, 0.05);
+    }
+
+    .defaults {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .network,
+    .discovery {
+      margin-bottom: 20px;
+    }
+
+    .network {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .voices {
+      display: grid;
+      gap: 18px;
+    }
+
+    .discovery {
+      display: grid;
+      gap: 18px;
+    }
+
+    .voice-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .voice-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), rgba(57, 85, 122, 0.6));
+      opacity: 0.7;
+    }
+
+    .voice-header {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .voice-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fffdf9;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 108px;
+    }
+
+    .yaml-box textarea {
+      min-height: 220px;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 13px;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .test-line {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 1fr auto;
+      margin-top: 12px;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .url-box textarea {
+      min-height: 86px;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 12px;
+    }
+
+    .discovery-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .discovery-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .discovery-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .issue-list {
+      color: var(--warn);
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: 18px 14px 28px; }
+      .test-line { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title">
+        <h1>Local GPT-SoVITS Admin</h1>
+        <p>管理音色预设、参考音频和 YAML 模型路径。保存后网关会自动重载。</p>
+      </div>
+      <div class="actions">
+        <button onclick="loadConfig()">刷新</button>
+        <button onclick="scanVoices()">扫描新模型</button>
+        <button onclick="window.open('/studio', '_blank')">手动合成页</button>
+        <button onclick="addVoice()">新增音色</button>
+        <button class="primary" onclick="saveConfig()">保存全部</button>
+      </div>
+    </div>
+
+    <div id="status" class="status">正在加载配置…</div>
+
+    <div class="defaults" id="defaultsBox"></div>
+    <div class="network" id="networkBox"></div>
+    <div class="discovery" id="discoveryBox"></div>
+
+    <div class="voices" id="voicesBox"></div>
+  </div>
+
+  <script>
+    let adminConfig = null;
+
+    function setStatus(message, level = "") {
+      const box = document.getElementById("status");
+      box.textContent = message;
+      box.className = "status" + (level ? " " + level : "");
+    }
+
+    function cloneVoiceTemplate() {
+      const index = (adminConfig?.voices?.length ?? 0) + 1;
+      return {
+        voice_id: `voice_${index}`,
+        display_name: `Voice ${index}`,
+        aliases: [],
+        config: `configs/proxy/voice_${index}.yaml`,
+        default_language: "zh",
+        prompt_language: "zh",
+        prompt_text: "",
+        ref_audio_path: "",
+        yaml_content: "version: v3\ncustom:\n  bert_base_path: GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large\n  cnhuhbert_base_path: GPT_SoVITS/pretrained_models/chinese-hubert-base\n  device: cuda\n  is_half: false\n  t2s_weights_path: \n  version: v3\n  vits_weights_path: \n"
+      };
+    }
+
+    function renderDefaults() {
+      const voices = adminConfig.voices.map((voice) => voice.voice_id);
+      const defaultsBox = document.getElementById("defaultsBox");
+      defaultsBox.innerHTML = ["auto", "zh", "ja"].map((key) => {
+        const options = voices.map((voiceId) => {
+          const selected = adminConfig.defaults?.[key] === voiceId ? "selected" : "";
+          return `<option value="${voiceId}" ${selected}>${voiceId}</option>`;
+        }).join("");
+        return `
+          <label>
+            默认 ${key.toUpperCase()}
+            <select onchange="updateDefault('${key}', this.value)">
+              ${options}
+            </select>
+          </label>
+        `;
+      }).join("");
+    }
+
+    function renderNetwork() {
+      const box = document.getElementById("networkBox");
+      const network = adminConfig.network || {};
+      const baseUrl = network.primary_base_url || "http://127.0.0.1:9880";
+      const ips = (network.ipv4_candidates || []).join(" / ") || "未检测到局域网地址";
+      box.innerHTML = `
+        <section class="network">
+          <label>
+            推荐基础地址
+            <input value="${escapeHtml(baseUrl)}" readonly>
+          </label>
+          <label>
+            检测到的 IPv4
+            <input value="${escapeHtml(ips)}" readonly>
+          </label>
+        </section>
+      `;
+    }
+
+    function renderDiscovery() {
+      const box = document.getElementById("discoveryBox");
+      const items = adminConfig.discovery || [];
+      if (!items.length) {
+        box.innerHTML = `
+          <section class="discovery-card">
+            <div class="discovery-header">
+              <h2>目录扫描</h2>
+              <div class="chip">未扫描</div>
+            </div>
+            <div class="hint">把新模型文件夹放进 <code>local_assets/voices</code> 后，点上方“扫描新模型”。推荐目录里至少有：参考音频、一个 .ckpt、一个 .pth。若没有 prompt.txt，会尝试用参考音频文件名当参考文本。</div>
+          </section>
+        `;
+        return;
+      }
+
+      box.innerHTML = items.map((item) => {
+        const state = item.registered ? "已注册" : (item.auto_ready ? "可直接使用" : "信息不完整");
+        const issues = (item.issues || []).join("\n");
+        const urlBlock = item.auto_ready ? `
+          <div class="url-box">
+            <label>
+              开源阅读 URL
+              <textarea readonly>${escapeHtml(item.reading_url || "")}</textarea>
+            </label>
+            <label>
+              Header
+              <textarea readonly>${escapeHtml(item.reading_header || '{"Content-Type":"application/json"}')}</textarea>
+            </label>
+          </div>
+        ` : "";
+        const actionBlock = item.auto_ready ? `
+          <div class="card-actions">
+            <button class="primary" onclick="registerDiscoveredVoice('${escapeHtml(item.voice_id)}')">注册为正式音色</button>
+          </div>
+        ` : "";
+
+        return `
+          <section class="discovery-card">
+            <div class="discovery-header">
+              <div>
+                <h2>${escapeHtml(item.display_name || item.voice_id)}</h2>
+                <div class="chip">${escapeHtml(item.voice_id)}</div>
+              </div>
+              <div class="chip">${escapeHtml(state)}</div>
+            </div>
+
+            <div class="field-grid">
+              <label>
+                目录
+                <input value="${escapeHtml(item.folder_path || "")}" readonly>
+              </label>
+              <label>
+                语言 / 版本
+                <input value="${escapeHtml(`${item.default_language || "?"} / ${item.version || "?"}`)}" readonly>
+              </label>
+              <label>
+                GPT 权重
+                <input value="${escapeHtml(item.gpt_weight || "")}" readonly>
+              </label>
+              <label>
+                SoVITS 权重
+                <input value="${escapeHtml(item.sovits_weight || "")}" readonly>
+              </label>
+            </div>
+
+            <label>
+              参考音频
+              <input value="${escapeHtml(item.ref_audio_path || "")}" readonly>
+            </label>
+            <label>
+              推断参考文本
+              <textarea readonly>${escapeHtml(item.prompt_text || "")}</textarea>
+            </label>
+            ${issues ? `<div class="issue-list">${escapeHtml(issues)}</div>` : ""}
+            ${urlBlock}
+            ${actionBlock}
+          </section>
+        `;
+      }).join("");
+    }
+
+    function renderVoices() {
+      const voicesBox = document.getElementById("voicesBox");
+      voicesBox.innerHTML = adminConfig.voices.map((voice, index) => `
+        <section class="voice-card">
+          <div class="voice-header">
+            <div>
+              <h2>${voice.display_name || voice.voice_id}</h2>
+              <div class="chip">${voice.voice_id}</div>
+            </div>
+            <button class="warn" onclick="removeVoice(${index})">${voice.persisted ? "删除正式音色" : "删除"}</button>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              voice_id
+              <input value="${escapeHtml(voice.voice_id)}" oninput="updateVoice(${index}, 'voice_id', this.value)">
+            </label>
+            <label>
+              display_name
+              <input value="${escapeHtml(voice.display_name || "")}" oninput="updateVoice(${index}, 'display_name', this.value)">
+            </label>
+            <label>
+              aliases
+              <input value="${escapeHtml((voice.aliases || []).join(', '))}" oninput="updateAliases(${index}, this.value)">
+            </label>
+            <label>
+              default_language
+              <select onchange="updateVoice(${index}, 'default_language', this.value)">
+                ${languageOptions(voice.default_language)}
+              </select>
+            </label>
+            <label>
+              prompt_language
+              <select onchange="updateVoice(${index}, 'prompt_language', this.value)">
+                ${languageOptions(voice.prompt_language)}
+              </select>
+            </label>
+            <label>
+              config path
+              <input value="${escapeHtml(voice.config || "")}" oninput="updateVoice(${index}, 'config', this.value)">
+            </label>
+          </div>
+
+          <label>
+            ref_audio_path
+            <input value="${escapeHtml(voice.ref_audio_path || "")}" oninput="updateVoice(${index}, 'ref_audio_path', this.value)">
+          </label>
+
+          <label>
+            prompt_text
+            <textarea oninput="updateVoice(${index}, 'prompt_text', this.value)">${escapeHtml(voice.prompt_text || "")}</textarea>
+          </label>
+
+          <div class="yaml-box">
+            <label>
+              YAML content
+              <textarea oninput="updateVoice(${index}, 'yaml_content', this.value)">${escapeHtml(voice.yaml_content || "")}</textarea>
+            </label>
+          </div>
+
+          <div class="url-box">
+            <label>
+              开源阅读 URL
+              <textarea readonly>${escapeHtml(voice.reading_url || "")}</textarea>
+            </label>
+            <label>
+              Header
+              <textarea readonly>${escapeHtml(voice.reading_header || '{"Content-Type":"application/json"}')}</textarea>
+            </label>
+          </div>
+
+          <div class="test-line">
+            <input id="testText-${index}" placeholder="输入一段测试文本，点试听会调用 /v1/tts">
+            <button onclick="testVoice(${index})">试听</button>
+          </div>
+          <audio id="player-${index}" controls></audio>
+        </section>
+      `).join("");
+    }
+
+    function languageOptions(current) {
+      return ["zh", "ja"].map((value) => {
+        const selected = current === value ? "selected" : "";
+        return `<option value="${value}" ${selected}>${value}</option>`;
+      }).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function updateVoice(index, key, value) {
+      adminConfig.voices[index][key] = value;
+      if (key === "voice_id" || key === "display_name") {
+        renderDefaults();
+      }
+    }
+
+    function updateAliases(index, value) {
+      adminConfig.voices[index].aliases = value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function updateDefault(key, value) {
+      adminConfig.defaults[key] = value;
+    }
+
+    function addVoice() {
+      adminConfig.voices.push(cloneVoiceTemplate());
+      renderDefaults();
+      renderVoices();
+      setStatus("已新增空白音色卡片。", "warn");
+    }
+
+    async function removeVoice(index) {
+      if (adminConfig.voices.length <= 1) {
+        setStatus("至少保留一个音色。", "warn");
+        return;
+      }
+      const voice = adminConfig.voices[index];
+      if (voice.persisted) {
+        const confirmed = confirm(`确定删除正式音色 ${voice.voice_id} 吗？这会立即写入配置。`);
+        if (!confirmed) return;
+        setStatus(`正在删除 ${voice.voice_id} …`);
+        const response = await fetch(`/admin/api/voices/${encodeURIComponent(voice.voice_id)}`, {
+          method: "DELETE"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setStatus(`删除失败：${JSON.stringify(result)}`, "warn");
+          return;
+        }
+        setStatus(result.message || `已删除 ${voice.voice_id}`, "ok");
+        await loadConfig();
+        return;
+      }
+
+      adminConfig.voices.splice(index, 1);
+      const remaining = adminConfig.voices.map((voice) => voice.voice_id);
+      for (const key of ["auto", "zh", "ja"]) {
+        if (!remaining.includes(adminConfig.defaults[key])) {
+          adminConfig.defaults[key] = remaining[0];
+        }
+      }
+      renderDefaults();
+      renderVoices();
+      setStatus("已删除音色卡片。", "warn");
+    }
+
+    async function loadConfig() {
+      setStatus("正在加载配置…");
+      const response = await fetch("/admin/api/config");
+      if (!response.ok) {
+        setStatus("配置加载失败。", "warn");
+        return;
+      }
+      adminConfig = await response.json();
+      renderDefaults();
+      renderNetwork();
+      renderDiscovery();
+      renderVoices();
+      const runtime = adminConfig.runtime || {};
+      const activeVoice = runtime.active_voice_id || "无";
+      setStatus(`配置已加载。当前激活音色：${activeVoice}`, "ok");
+    }
+
+    async function scanVoices() {
+      setStatus("正在扫描 local_assets/voices …");
+      const response = await fetch("/admin/api/scan-voices", {
+        method: "POST"
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(`扫描失败：${JSON.stringify(result)}`, "warn");
+        return;
+      }
+      setStatus(result.message || "扫描完成。", "ok");
+      await loadConfig();
+    }
+
+    async function saveConfig() {
+      setStatus("正在保存配置…");
+      const response = await fetch("/admin/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(adminConfig)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(`保存失败：${JSON.stringify(result)}`, "warn");
+        return;
+      }
+      setStatus("配置已保存，网关已重载。", "ok");
+      await loadConfig();
+    }
+
+    async function registerDiscoveredVoice(voiceId) {
+      setStatus(`正在注册 ${voiceId} …`);
+      const response = await fetch("/admin/api/register-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voice_id: voiceId })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(`注册失败：${JSON.stringify(result)}`, "warn");
+        return;
+      }
+      setStatus(result.message || `${voiceId} 已注册。`, "ok");
+      await loadConfig();
+    }
+
+    async function testVoice(index) {
+      const voice = adminConfig.voices[index];
+      const text = document.getElementById(`testText-${index}`).value.trim();
+      if (!text) {
+        setStatus("请先输入测试文本。", "warn");
+        return;
+      }
+      setStatus(`正在生成 ${voice.voice_id} 的试听…`);
+      const response = await fetch("/v1/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          voice_id: voice.voice_id,
+          language: voice.default_language,
+          response_format: "mp3"
+        })
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        setStatus(`试听失败：${errorText}`, "warn");
+        return;
+      }
+      const blob = await response.blob();
+      const player = document.getElementById(`player-${index}`);
+      player.src = URL.createObjectURL(blob);
+      player.play().catch(() => {});
+      setStatus(`试听完成：${voice.voice_id}`, "ok");
+    }
+
+    loadConfig().catch(() => setStatus("页面初始化失败。", "warn"));
+  </script>
+</body>
+</html>

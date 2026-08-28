@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local GPT-SoVITS Studio</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f0e7;
+      --panel: rgba(255, 252, 247, 0.95);
+      --ink: #1f1b16;
+      --muted: #675d52;
+      --line: #c7b9a7;
+      --accent: #a0432c;
+      --accent-soft: #ead2c4;
+      --ok: #2f6b3d;
+      --warn: #8a5d18;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(160, 67, 44, 0.15), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(57, 85, 122, 0.12), transparent 28%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    .hero,
+    .panel,
+    .result-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(31, 27, 22, 0.05);
+    }
+
+    .hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .hero p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button,
+    .link-button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    button:hover,
+    .link-button:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 18px rgba(31, 27, 22, 0.08);
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff9f2;
+    }
+
+    .status {
+      margin-bottom: 18px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      min-height: 48px;
+    }
+
+    .status.ok { border-color: rgba(47, 107, 61, 0.45); color: var(--ok); }
+    .status.warn { border-color: rgba(138, 93, 24, 0.45); color: var(--warn); }
+
+    .panel { margin-bottom: 18px; }
+
+    .field-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: #fffdf9;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.7;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .result-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .result-card[hidden] {
+      display: none;
+    }
+
+    audio {
+      width: 100%;
+    }
+
+    .path-box {
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 12px;
+      background: #fffdf9;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      word-break: break-all;
+    }
+
+    .metrics {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: 18px 14px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1>Manual TTS Studio</h1>
+        <p>选音色、输文本、直接合成。结果会自动保存到服务器输出目录，并支持在线试听。</p>
+      </div>
+      <div class="actions">
+        <a class="link-button" href="/admin" target="_blank" rel="noreferrer">打开管理页</a>
+        <button onclick="scanVoices()">扫描新模型</button>
+        <button onclick="loadVoices()">刷新音色</button>
+      </div>
+    </section>
+
+    <div id="status" class="status">正在加载音色列表…</div>
+
+    <section class="panel">
+      <div class="field-grid">
+        <label>
+          音色
+          <select id="voiceSelect" onchange="syncVoiceLanguage()"></select>
+        </label>
+        <label>
+          语言
+          <select id="languageSelect">
+            <option value="zh">zh</option>
+            <option value="ja">ja</option>
+            <option value="auto">auto</option>
+          </select>
+        </label>
+        <label>
+          输出格式
+          <select id="formatSelect">
+            <option value="wav">wav</option>
+            <option value="mp3">mp3</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-grid">
+        <label>
+          切句方式
+          <select id="splitSelect">
+            <option value="cut0">cut0</option>
+            <option value="cut5">cut5</option>
+          </select>
+        </label>
+        <label>
+          片段间隔
+          <input id="intervalInput" type="number" step="0.01" min="0.01" value="0.02">
+        </label>
+        <label>
+          语速
+          <input id="speedInput" type="number" step="0.05" min="0.5" max="2.0" value="1.0">
+        </label>
+      </div>
+
+      <label>
+        文本
+        <textarea id="textInput" placeholder="输入想合成的文本。"></textarea>
+      </label>
+
+      <div class="actions" style="margin-top: 14px;">
+        <button class="primary" onclick="synthesize(false)">开始合成</button>
+        <button onclick="synthesize(true)">测速生成</button>
+      </div>
+      <div class="hint" style="margin-top: 12px;">
+        合成结果会自动保存到 <code>output/manual_synth/&lt;voice_id&gt;/日期/</code>。如果选择 <code>mp3</code>，试听和下载都走 mp3；否则默认 wav。
+      </div>
+    </section>
+
+    <section id="resultCard" class="result-card" hidden>
+      <div id="resultTitle" style="font-size: 18px; font-weight: 600;"></div>
+      <div id="metricsBox" class="metrics"></div>
+      <audio id="resultPlayer" controls></audio>
+      <div>
+        <div style="font-size: 13px; color: var(--muted); margin-bottom: 6px;">保存路径</div>
+        <div id="savedPath" class="path-box"></div>
+      </div>
+      <div class="actions">
+        <a id="downloadLink" class="link-button" href="#" download>下载文件</a>
+        <a id="openLink" class="link-button" href="#" target="_blank" rel="noreferrer">新标签页打开音频</a>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let voices = [];
+
+    function setStatus(message, level = "") {
+      const box = document.getElementById("status");
+      box.textContent = message;
+      box.className = "status" + (level ? " " + level : "");
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function syncVoiceLanguage() {
+      const select = document.getElementById("voiceSelect");
+      const language = document.getElementById("languageSelect");
+      const voice = voices.find((item) => item.voice_id === select.value);
+      if (voice?.default_language) {
+        language.value = voice.default_language;
+      }
+    }
+
+    async function loadVoices() {
+      setStatus("正在加载音色列表…");
+      const response = await fetch("/v1/voices");
+      if (!response.ok) {
+        setStatus("音色列表加载失败。", "warn");
+        return;
+      }
+      const data = await response.json();
+      voices = data.voices || [];
+      const select = document.getElementById("voiceSelect");
+      select.innerHTML = voices.map((voice) => {
+        const label = `${voice.voice_id} · ${voice.display_name || voice.voice_id} · ${voice.default_language}`;
+        return `<option value="${escapeHtml(voice.voice_id)}">${escapeHtml(label)}</option>`;
+      }).join("");
+
+      if (voices.length) {
+        syncVoiceLanguage();
+        setStatus(`已加载 ${voices.length} 个音色。`, "ok");
+      } else {
+        setStatus("当前没有可用音色。", "warn");
+      }
+    }
+
+    async function scanVoices() {
+      setStatus("正在扫描 local_assets/voices …");
+      const response = await fetch("/admin/api/scan-voices", { method: "POST" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(`扫描失败：${JSON.stringify(result)}`, "warn");
+        return;
+      }
+      setStatus(result.message || "扫描完成。", "ok");
+      await loadVoices();
+    }
+
+    async function synthesize(measureSpeed) {
+      const text = document.getElementById("textInput").value.trim();
+      if (!text) {
+        setStatus("请先输入文本。", "warn");
+        return;
+      }
+
+      const payload = {
+        text,
+        voice_id: document.getElementById("voiceSelect").value,
+        language: document.getElementById("languageSelect").value,
+        response_format: document.getElementById("formatSelect").value,
+        text_split_method: document.getElementById("splitSelect").value,
+        fragment_interval: Number(document.getElementById("intervalInput").value || "0.02"),
+        speed_factor: Number(document.getElementById("speedInput").value || "1.0")
+      };
+
+      setStatus(`正在合成 ${payload.voice_id} …`);
+      const response = await fetch("/admin/api/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(`合成失败：${JSON.stringify(result)}`, "warn");
+        return;
+      }
+
+      const card = document.getElementById("resultCard");
+      const player = document.getElementById("resultPlayer");
+      const downloadLink = document.getElementById("downloadLink");
+      const openLink = document.getElementById("openLink");
+      const metricsBox = document.getElementById("metricsBox");
+
+      document.getElementById("resultTitle").textContent = `合成完成：${result.voice_id}`;
+      document.getElementById("savedPath").textContent = result.saved_path || "";
+      metricsBox.innerHTML = measureSpeed ? [
+        metricCard("服务端耗时", result.elapsed_seconds != null ? `${result.elapsed_seconds}s` : "未知"),
+        metricCard("音频时长", result.audio_duration_seconds != null ? `${result.audio_duration_seconds}s` : "未知"),
+        metricCard("实时系数", result.realtime_factor != null ? `${result.realtime_factor}x` : "未知"),
+        metricCard("字符每秒", result.chars_per_second != null ? `${result.chars_per_second}` : "未知")
+      ].join("") : "";
+      player.src = result.audio_url || "";
+      downloadLink.href = result.download_url || result.audio_url || "#";
+      openLink.href = result.audio_url || "#";
+      card.hidden = false;
+      player.play().catch(() => {});
+      const suffix = measureSpeed && result.elapsed_seconds != null ? `，耗时 ${result.elapsed_seconds}s` : "";
+      setStatus(`合成完成，已保存到 ${result.saved_path}${suffix}`, "ok");
+    }
+
+    function metricCard(label, value) {
+      return `
+        <div class="path-box">
+          <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">${escapeHtml(label)}</div>
+          <div style="font-size: 18px; font-weight: 600;">${escapeHtml(value)}</div>
+        </div>
+      `;
+    }
+
+    loadVoices().catch(() => setStatus("页面初始化失败。", "warn"));
+  </script>
+</body>
+</html>
